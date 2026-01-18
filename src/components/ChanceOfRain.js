@@ -25,10 +25,7 @@ const ChanceOfRain = ({ loadDayForecast }) => {
     time: formatHour(hour.time, index + 1),
     percentage: hour.chance_of_rain || 0,
   }));
-  console.log(
-    'perc:',
-    loadDayForecast?.forecast?.forecastday?.[0]?.hour?.[5]?.chance_of_rain,
-  );
+
   const ProgressBar = ({ percentage }) => {
     return (
       <View style={styles.container}>

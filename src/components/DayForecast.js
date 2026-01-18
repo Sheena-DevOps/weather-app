@@ -7,8 +7,6 @@ import { CalendarIcon } from '../components/Icons';
 const DayForecast = ({ weather }) => {
   const offset = 10;
 
-  console.log('in hereeeeee', weather);
-
   const data = [
     {
       value: weather.forecast.forecastday[0].day.mintemp_c + offset,
@@ -52,7 +50,6 @@ const DayForecast = ({ weather }) => {
       label: 'Sun',
     },
   ];
-  console.log('data', data);
 
   const renderDot = item =>
     item.value === weather.forecast.forecastday[3].day.maxtemp_c + offset ? (

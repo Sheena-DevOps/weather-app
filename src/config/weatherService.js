@@ -13,7 +13,6 @@ export const fetchWeather = async (longitude, latitude, isTmrw) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Weather API Error:', error);
     return null;
   }
 };
@@ -44,7 +43,6 @@ export const fetchDayForecast = async (longitude, latitude, isTmrw) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Day Forecast API Error:', error);
     return null;
   }
 };
