@@ -4,15 +4,26 @@ import { LineChart } from 'react-native-gifted-charts';
 import Theme from '../assets/theme';
 import { CalendarIcon } from '../components/Icons';
 
-const DayForecast = () => {
+const DayForecast = ({ weather }) => {
   const offset = 10;
 
+  console.log('in hereeeeee', weather);
+
   const data = [
-    { value: -8 + offset, label: 'Mon' },
-    { value: -3 + offset, label: 'Tue' },
-    { value: -4 + offset, label: 'Wed' },
     {
-      value: 3 + offset,
+      value: weather.forecast.forecastday[0].day.mintemp_c + offset,
+      label: 'Mon',
+    },
+    {
+      value: weather.forecast.forecastday[1].day.mintemp_c + offset,
+      label: 'Tue',
+    },
+    {
+      value: weather.forecast.forecastday[2].day.mintemp_c + offset,
+      label: 'Wed',
+    },
+    {
+      value: weather.forecast.forecastday[3].day.mintemp_c + offset,
       label: 'Thu',
       showStrip: true,
       stripHeight: 40,
@@ -21,18 +32,32 @@ const DayForecast = () => {
       stripDashArray: [6, 6],
       dataPointLabelComponent: () => (
         <View style={styles.tempBubble}>
-          <Text style={styles.tempText}>3°</Text>
+          <Text style={styles.tempText}>
+            {weather.forecast.forecastday[3].day.mintemp_c + offset}°
+          </Text>
         </View>
       ),
       dataPointLabelShiftY: -55,
     },
-    { value: -1 + offset, label: 'Fri' },
-    { value: -6 + offset, label: 'Sat' },
-    { value: 5 + offset, label: 'Sun' },
+    {
+      value: weather.forecast.forecastday[4].day.maxtemp_c + offset,
+      label: 'Fri',
+    },
+    {
+      value: weather.forecast.forecastday[5].day.maxtemp_c + offset,
+      label: 'Sat',
+    },
+    {
+      value: weather.forecast.forecastday[6].day.maxtemp_c + offset,
+      label: 'Sun',
+    },
   ];
+  console.log('data', data);
 
   const renderDot = item =>
-    item.value === 3 + offset ? <View style={styles.dot} /> : null;
+    item.value === weather.forecast.forecastday[3].day.maxtemp_c + offset ? (
+      <View style={styles.dot} />
+    ) : null;
 
   return (
     <View style={styles.card}>
@@ -49,7 +74,7 @@ const DayForecast = () => {
         <LineChart
           data={data}
           curved
-          stepValue={10}
+          stepValue={30}
           stepHeight={40}
           thickness={2}
           color="#000"
@@ -127,7 +152,7 @@ const styles = StyleSheet.create({
   },
   tempBubble: {
     marginTop: 30,
-    width: 40,
+    width: 65,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Theme.white,

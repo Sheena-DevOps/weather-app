@@ -1,35 +1,35 @@
 import React from 'react';
 import { Text, View, StyleSheet, Image, ScrollView } from 'react-native';
 import Theme from '../assets/theme';
-import { ClockIcon, Cloudy, Sunny } from '../components/Icons';
+import { ClockIcon } from '../components/Icons';
 
-const HourForecast = () => {
-  const cardData = [
-    {
-      id: '1',
-      title: 'Now',
-      status: 'sunny',
-      degree: '10°',
-    },
-    {
-      id: '2',
-      title: 'Now',
-      status: 'cloud',
-      degree: '10°',
-    },
-    {
-      id: '3',
-      title: 'Now',
-      status: 'sunny',
-      degree: '12°',
-    },
-    {
-      id: '4',
-      title: 'Now',
-      status: 'cloud',
-      degree: '12°',
-    },
-  ];
+const HourForecast = ({ loadDayForecast }) => {
+  const formatHour = (time, index) => {
+    const date = new Date(time);
+    const hour = date.getHours();
+
+    if (index === 0) return 'Now';
+
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const formattedHour = hour % 12 || 12;
+
+    return `${formattedHour}${period}`;
+  };
+
+  const todayHours = loadDayForecast?.forecast?.forecastday?.[0]?.hour ?? [];
+  const tomorrowHours = loadDayForecast?.forecast?.forecastday?.[1]?.hour ?? [];
+  const currentHour = new Date().getHours();
+  const combinedHours = [
+    ...todayHours.slice(currentHour),
+    ...tomorrowHours,
+  ].slice(0, 12);
+
+  const cardData = combinedHours.map((hour, index) => ({
+    id: index.toString(),
+    time: formatHour(hour.time, index),
+    icon: `https:${hour.condition.icon}`,
+    temp: `${hour.temp_c}°`,
+  }));
 
   return (
     <View style={styles.card2}>
@@ -46,15 +46,14 @@ const HourForecast = () => {
       >
         {cardData.map(item => (
           <View key={item.id} style={styles.timeColumn}>
-            <Text style={styles.cardText}>{item.title}</Text>
+            <Text style={styles.cardText}>{item.time}</Text>
             <View style={{ height: 30 }}>
-              {item.status === 'sunny' ? (
-                <Sunny height={30} />
-              ) : (
-                <Cloudy height={25} />
-              )}
+              <Image
+                source={{ uri: item.icon }}
+                style={{ width: 30, height: 30 }}
+              />
             </View>
-            <Text style={styles.dayText}>{item.degree}</Text>
+            <Text style={styles.dayText}>{item.temp}</Text>
           </View>
         ))}
       </ScrollView>

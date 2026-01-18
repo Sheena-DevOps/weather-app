@@ -20,74 +20,183 @@ import {
   SunsetIcon,
   DownArrowIcon,
   UpArrowIcon,
-  SunnyLarge,
 } from '../components/Icons';
 import HourForecast from '../components/HourForecast';
 import DayForecast from '../components/DayForecast';
 import ChanceOfRain from '../components/ChanceOfRain';
 import DaysList from '../components/DaysList';
-import { fetchWeather } from '../config/weatherService';
+import { fetchWeather, fetchDayForecast } from '../config/weatherService';
+import Geolocation from '@react-native-community/geolocation';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('today');
   const [weather, setWeather] = useState(null);
+  const [dayForecast, setDayForecast] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [position, setPosition] = useState(null);
 
   useEffect(() => {
-    loadWeather();
+    getCurrentPosition();
   }, []);
+
+  useEffect(() => {
+    if (position) {
+      loadWeather();
+      loadDayForecast();
+    }
+  }, [position]);
+
+  const getCurrentPosition = () => {
+    Geolocation.getCurrentPosition(
+      pos => {
+        setPosition(pos);
+      },
+      error => console.log('GetCurrentPosition Error', JSON.stringify(error)),
+      { enableHighAccuracy: true },
+    );
+  };
 
   const loadWeather = async () => {
     try {
-      setLoading(true);
-      const data = await fetchWeather();
-      setWeather(data);
-      console.log('Weather Data:', data);
+      if (position) {
+        const data = await fetchWeather(
+          position.coords.longitude,
+          position.coords.latitude,
+        );
+        setWeather(data);
+      }
     } catch (error) {
       console.log(error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  if (loading) {
-    return <ActivityIndicator size="large" />;
+  const loadDayForecast = async () => {
+    try {
+      if (position) {
+        const data = await fetchDayForecast(
+          position.coords.longitude,
+          position.coords.latitude,
+        );
+        setDayForecast(data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const input =
+    activeTab === 'today' || activeTab === '10days'
+      ? weather?.location?.localtime
+      : activeTab === 'tomorrow'
+      ? weather?.forecast?.forecastday?.[1]?.date
+      : null;
+
+  const localDate = input ? new Date(input.replace(' ', 'T')) : null;
+
+  const formatted = localDate
+    ? new Intl.DateTimeFormat('en-US', {
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+        .format(localDate)
+        .replace(' at ', ', ')
+    : '';
+
+  function timeStringToDate(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+
+    const parts = timeStr.trim().split(' ');
+    if (parts.length !== 2) return null;
+
+    const [time, modifier] = parts;
+    let [hours, minutes] = time.split(':').map(Number);
+
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+
+    if (modifier === 'PM' && hours !== 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+
+    const targetDate = new Date();
+    targetDate.setHours(hours, minutes, 0, 0);
+
+    return targetDate;
+  }
+
+  function getRelativeTime(timeStr) {
+    const target = timeStringToDate(timeStr);
+    if (!target) return '';
+
+    const now = new Date();
+    const diffMs = target.getTime() - now.getTime();
+    const diffMinutes = Math.round(Math.abs(diffMs) / 60000);
+
+    if (diffMinutes < 60) {
+      return diffMs < 0 ? `${diffMinutes}m ago` : `in ${diffMinutes}m`;
+    }
+
+    const diffHours = Math.round(diffMinutes / 60);
+
+    return diffMs < 0 ? `${diffHours}h ago` : `in ${diffHours}h`;
   }
 
   const cardData = [
     {
       id: '1',
       title: 'Wind speed',
-      unit: 'km/h',
-      value: '12',
+      unit: `${weather?.current?.wind_kph ?? ''} km/h`,
+      value: `${weather?.current?.wind_mph ?? ''} km/h`,
       icon: <AirIcon size={20} />,
       status: 'up',
     },
     {
       id: '2',
       title: 'Rain chance',
-      unit: '%',
-      value: '%',
+      unit: `${weather?.current?.precip_mm ?? ''} %`,
+      value: `${weather?.current?.precip_in ?? ''} %`,
       icon: <RainIcon size={20} />,
       status: 'down',
     },
     {
       id: '3',
       title: 'Pressure',
-      unit: 'hPa',
-      value: 'hpa',
+      unit: `${weather?.current?.pressure_mb ?? ''} hPa`,
+      value: `${weather?.current?.pressure_in ?? ''} hPa`,
       icon: <WaveIcon size={20} />,
       status: 'down',
     },
     {
       id: '4',
-      title: 'Pressure',
-      unit: 'hPa',
-      value: 'hpa',
+      title: 'UV Index',
+      unit: `${weather?.current?.uv ?? ''}`,
+      value: `${weather?.current?.uv ?? ''}`,
       icon: <WaveIcon size={20} />,
       status: 'down',
     },
   ];
+
+  const fetchTmrwForecast = async () => {
+    try {
+      if (position) {
+        const data = await fetchDayForecast(
+          position.coords.longitude,
+          position.coords.latitude,
+          true,
+        );
+        const weatherData = await fetchWeather(
+          position.coords.longitude,
+          position.coords.latitude,
+          true,
+        );
+        setDayForecast(data);
+        setWeather(weatherData);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -105,42 +214,75 @@ const Dashboard = () => {
         />
         <View style={styles.content}>
           <View style={styles.row2}>
-            <Text style={styles.text}>
-              {weather?.location?.name ?? ''},{' '}
+            <Text style={[styles.text, { maxWidth: '60%' }]}>
+              {weather?.location?.tz_id ?? ''},{' '}
               {weather?.location?.country ?? ''}
             </Text>
             <SearchIcon size={20} />
           </View>
           <View style={styles.row2}>
             <View style={styles.temp}>
-              <Text style={styles.tempText}>3°</Text>
-              <Text style={[styles.text, { marginLeft: -20 }]}>Feels like</Text>
+              <Text style={styles.tempText}>
+                {activeTab === 'today' || activeTab === '10days'
+                  ? weather?.current?.temp_c
+                  : activeTab === 'tomorrow'
+                  ? weather?.forecast?.forecastday?.[1]?.day?.maxtemp_c
+                  : ''}
+                °
+              </Text>
+              {(activeTab === 'today' || activeTab === '10days') && (
+                <Text style={[styles.text, { marginLeft: -20 }]}>
+                  Feels like {weather?.current?.feelslike_c ?? ''}°
+                </Text>
+              )}
             </View>
             <View style={styles.timeColumn}>
-              <SunnyLarge size={100} />
-              <Text style={[styles.text, { fontSize: 22 }]}>Cloudy</Text>
+              <Image
+                source={{
+                  uri: weather?.current?.condition?.icon
+                    ? `https:${weather.current.condition.icon}`
+                    : null,
+                }}
+                style={{ width: 100, height: 100 }}
+              />
+              <Text style={[styles.text, { fontSize: 22 }]}>
+                {weather?.current?.condition?.text ?? ''}
+              </Text>
             </View>
           </View>
           <View style={styles.row2}>
-            <Text style={styles.text}>date, time</Text>
+            <Text style={styles.text}>{formatted}</Text>
             <View>
-              <Text style={styles.dayTempText}>Day</Text>
-              <Text style={styles.dayTempText}>Night</Text>
+              <Text style={styles.dayTempText}>
+                Day {weather?.forecast?.forecastday?.[0]?.day?.maxtemp_c ?? ''}°
+              </Text>
+              <Text style={styles.dayTempText}>
+                Night{' '}
+                {weather?.forecast?.forecastday?.[0]?.day?.mintemp_c ?? ''}°
+              </Text>
             </View>
           </View>
         </View>
 
+        {loading && <ActivityIndicator size="large" />}
+
         <View style={styles.tabRow}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'today' && styles.activeTab]}
-            onPress={() => setActiveTab('today')}
+            onPress={() => {
+              loadDayForecast();
+              setActiveTab('today');
+            }}
           >
             <Text style={styles.dayText}>Today</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.tab, activeTab === 'tomorrow' && styles.activeTab]}
-            onPress={() => setActiveTab('tomorrow')}
+            onPress={() => {
+              fetchTmrwForecast();
+              setActiveTab('tomorrow');
+            }}
           >
             <Text style={styles.dayText}>Tomorrow</Text>
           </TouchableOpacity>
@@ -155,7 +297,7 @@ const Dashboard = () => {
 
         <View style={styles.container2}>
           {activeTab === '10days' ? (
-            <DaysList />
+            <DaysList weather={weather} />
           ) : (
             <>
               <View style={styles.contentGrid}>
@@ -180,11 +322,11 @@ const Dashboard = () => {
                 ))}
               </View>
 
-              <HourForecast />
+              <HourForecast loadDayForecast={dayForecast} />
 
-              <DayForecast />
+              {weather && <DayForecast weather={weather} />}
 
-              <ChanceOfRain />
+              <ChanceOfRain loadDayForecast={dayForecast} />
 
               <View style={styles.contentGrid}>
                 <View style={styles.card}>
@@ -194,8 +336,16 @@ const Dashboard = () => {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardText}>Sunrise</Text>
                     <View style={styles.row2}>
-                      <Text style={styles.timeText}>4 AM</Text>
-                      <Text style={styles.coverageText}>4h ago</Text>
+                      <Text style={styles.timeText}>
+                        {weather?.forecast?.forecastday?.[0]?.astro?.sunrise ??
+                          ''}
+                      </Text>
+                      <Text style={styles.coverageText}>
+                        {' '}
+                        {getRelativeTime(
+                          weather?.forecast?.forecastday?.[0]?.astro?.sunrise,
+                        )}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -207,8 +357,16 @@ const Dashboard = () => {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardText}>Sunset</Text>
                     <View style={styles.row2}>
-                      <Text style={styles.timeText}>4 PM</Text>
-                      <Text style={styles.coverageText}>in 9h</Text>
+                      <Text style={styles.timeText}>
+                        {weather?.forecast?.forecastday?.[0]?.astro?.sunset ??
+                          ''}
+                      </Text>
+                      <Text style={styles.coverageText}>
+                        {' '}
+                        {getRelativeTime(
+                          weather?.forecast?.forecastday?.[0]?.astro?.sunset,
+                        )}{' '}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -297,7 +455,7 @@ const styles = StyleSheet.create({
   },
   coverageText: {
     color: Theme.black,
-    fontSize: 11,
+    fontSize: 9,
     fontFamily: 'ProductSans-Medium',
   },
   row3: {

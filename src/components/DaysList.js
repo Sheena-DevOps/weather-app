@@ -3,37 +3,33 @@ import { Text, View, StyleSheet } from 'react-native';
 import Theme from '../assets/theme';
 import { DropDownIcon, Sunny, Cloudy } from './Icons';
 
-const DaysList = () => {
-  const cardData = [
-    {
-      id: '1',
-      day: 'Today',
-      weather: 'cloudy',
-      tempHigh: '3°',
-      tempLow: '-2°',
-    },
-    {
-      id: '2',
-      day: 'Thursday,Jan 19',
-      weather: 'rainy',
-      tempHigh: '5°',
-      tempLow: '-2°',
-    },
-    {
-      id: '3',
-      day: 'Thursday,Jan 19',
-      weather: 'cloudy and sunny',
-      tempHigh: '5°',
-      tempLow: '-2°',
-    },
-    {
-      id: '4',
-      day: 'Thursday,Jan 19',
-      weather: 'cloudy',
-      tempHigh: '5°',
-      tempLow: '-2°',
-    },
-  ];
+const DaysList = ({ weather }) => {
+  const formatFullDate = dateString => {
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const formatDaySmart = (date, index) => {
+    if (index === 0) return 'Today';
+    if (index === 1) return 'Tomorrow';
+    return formatFullDate(date);
+  };
+
+  const cardData = weather?.forecast?.forecastday
+    ?.slice(0, 10)
+    .map((day, index) => ({
+      id: index.toString(),
+      date: formatDaySmart(day.date, index),
+      weather: day.day.condition.text,
+      icon: `https:${day.day.condition.icon}`,
+      tempHigh: `${day.day.maxtemp_c}°`,
+      tempLow: `${day.day.mintemp_c}°`,
+    }));
 
   return (
     <>
@@ -41,7 +37,7 @@ const DaysList = () => {
         <View style={styles.card2} key={item.id}>
           <View style={styles.row}>
             <View style={styles.leftCol}>
-              <Text style={styles.cardText}>{item.day}</Text>
+              <Text style={styles.cardText}>{item.date}</Text>
               <Text style={styles.cardSubText}>{item.weather}</Text>
             </View>
 

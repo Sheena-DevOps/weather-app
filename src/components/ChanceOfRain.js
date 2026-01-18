@@ -3,34 +3,43 @@ import { Text, View, StyleSheet } from 'react-native';
 import Theme from '../assets/theme';
 import { RainIcon } from '../components/Icons';
 
-const ChanceOfRain = () => {
-  const cardData = [
-    {
-      id: '1',
-      time: '7 PM',
-      percentage: 50,
-    },
-    {
-      id: '2',
-      time: '8 PM',
-      percentage: 70,
-    },
-    {
-      id: '3',
-      time: '9 PM',
-      percentage: 40,
-    },
-    {
-      id: '4',
-      time: '10 PM',
-      percentage: 80,
-    },
-  ];
+const ChanceOfRain = ({ loadDayForecast }) => {
+  const formatHour = (time, index) => {
+    const date = new Date(time);
+    const hour = date.getHours();
 
+    if (index === 0) return 'Now';
+
+    const period = hour >= 12 ? ' PM' : ' AM';
+    const formattedHour = hour % 12 || 12;
+
+    return `${formattedHour}${period}`;
+  };
+
+  const todayHours = loadDayForecast?.forecast?.forecastday?.[0]?.hour ?? [];
+  const tomorrowHours = loadDayForecast?.forecast?.forecastday?.[1]?.hour ?? [];
+  const currentHour = new Date().getHours();
+  const combinedHours = [...todayHours.slice(currentHour), ...tomorrowHours];
+  const rainData = combinedHours.slice(1, 5).map((hour, index) => ({
+    id: index.toString(),
+    time: formatHour(hour.time, index + 1),
+    percentage: hour.chance_of_rain || 0,
+  }));
+  console.log(
+    'perc:',
+    loadDayForecast?.forecast?.forecastday?.[0]?.hour?.[5]?.chance_of_rain,
+  );
   const ProgressBar = ({ percentage }) => {
     return (
       <View style={styles.container}>
-        <View style={[styles.fill, { width: `${percentage}%` }]} />
+        <View
+          style={[
+            styles.fill,
+            {
+              width: `${Math.min(percentage, 100)}%`,
+            },
+          ]}
+        />
       </View>
     );
   };
@@ -43,11 +52,11 @@ const ChanceOfRain = () => {
         </View>
         <Text style={styles.cardText}>Chance of rain</Text>
       </View>
-      {cardData.map(item => (
+      {rainData.map(item => (
         <View style={styles.row2} key={item.id}>
           <Text style={styles.cardText}>{item.time}</Text>
           <ProgressBar percentage={item.percentage} />
-          <Text style={styles.cardText}>{item.percentage}%</Text>
+          <Text style={styles.cardText}>{Math.round(item.percentage)}%</Text>
         </View>
       ))}
     </View>
